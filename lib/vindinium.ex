@@ -12,7 +12,7 @@ defmodule Vindinium do
   end
 
   def start_game(secret, :arena, _turns) do
-    Vindinium.Client.post!("http://vindinium.org/api/arena", {:form, [{:key, secret}]}, [timeout: 10000]).body
+    Vindinium.Client.post!("http://vindinium.org/api/arena", {:form, [{:key, secret}]}, [timeout: 3_000]).body
   end
 
   def move(%{"game" => %{"finished" => true}} = state, _secret, _bot) do
@@ -28,7 +28,7 @@ defmodule Vindinium do
   end
 
   def move(state, secret, bot) do
-    IO.write(".")
+    #IO.write(".")
     Vindinium.Client.post!(state["playUrl"], {:form, [{:key, secret}, {:dir, bot.move(state)}]}).body
     |> move(secret, bot)
   end
