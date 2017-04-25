@@ -1,7 +1,6 @@
 defmodule Vindinium.Bots.Debug do
 
   require Logger
-  alias Vindinium.Bots.Utils
 
   # Magic numbers
   @hero_life_max 100
@@ -93,7 +92,7 @@ defmodule Vindinium.Bots.Debug do
     |> case do
 
       [] ->
-        Logger.info("No other hero next to us.")
+        #Logger.info("No other hero next to us.")
         :ignore
 
       [{dir, {:hero, id}}] ->
@@ -111,7 +110,7 @@ defmodule Vindinium.Bots.Debug do
     end
   end
 
-  defp next_mine(%{map: map} = state) do
+  defp next_mine(state) do
     if hero_can_win_mine?(state) do
       # Check if there is a mine directly next to us we can capture.
       state
@@ -127,16 +126,7 @@ defmodule Vindinium.Bots.Debug do
       |> case do
 
         [] ->
-          map
-          |> find_next_mine(hero_id(state))
-          |> case do
-            {:ok, coords} ->
-              Logger.info("Mine seen at #{inspect coords}.")
-              {:ok, coords_to_direction(coords)}
-            :error ->
-              Logger.info("No mine next to hero.")
-              :ignore
-          end
+          :ignore
 
         [{dir, _} | _] ->
           Logger.info("Mine at #{inspect dir} to hero.")
@@ -159,16 +149,7 @@ defmodule Vindinium.Bots.Debug do
       |> case do
 
         [] ->
-          map
-          |> find_next_tavern
-          |> case do
-            {:ok, coords} ->
-              Logger.info("Tavern seen at #{inspect coords}.")
-              {:ok, coords_to_direction(coords)}
-            :error ->
-              Logger.info("No tavern next to hero.")
-              :ignore
-          end
+          :ignore
 
         [dir | _] ->
           Logger.info("Tavern at #{inspect dir} to hero.")
@@ -180,26 +161,6 @@ defmodule Vindinium.Bots.Debug do
     end
   end
 
-  defp coords_to_direction({0, 0}), do: :stay
-
-  defp coords_to_direction({y, 0}) when y > 0, do: :east
-  defp coords_to_direction({y, 0}) when y < 0, do: :west
-
-  defp coords_to_direction({0, x}) when x > 0, do: :south
-  defp coords_to_direction({0, x}) when x < 0, do: :north
-
-  defp coords_to_direction({y, x}) when y > 0 and x > 0 and abs(y) > abs(x), do: :east
-  defp coords_to_direction({y, x}) when y > 0 and x > 0 and abs(y) <= abs(x), do: :south
-
-  defp coords_to_direction({y, x}) when y < 0 and x > 0 and abs(y) > abs(x), do: :west
-  defp coords_to_direction({y, x}) when y < 0 and x > 0 and abs(y) <= abs(x), do: :south
-
-  defp coords_to_direction({y, x}) when y > 0 and x < 0 and abs(y) > abs(x), do: :east
-  defp coords_to_direction({y, x}) when y > 0 and x < 0 and abs(y) <= abs(x), do: :north
-
-  defp coords_to_direction({y, x}) when y < 0 and x < 0 and abs(y) > abs(x), do: :west
-  defp coords_to_direction({y, x}) when y < 0 and x < 0 and abs(y) <= abs(x), do: :north
-
   defp next_empty(%{map: map}) do
     # Check if there are empty tiles next to us.
     @direction_keys
@@ -209,13 +170,15 @@ defmodule Vindinium.Bots.Debug do
     |> Enum.shuffle
     |> case do
       [] ->
-        Logger.info("No empty tile next to hero.")
+        #Logger.info("No empty tile next to hero.")
         :ignore
       [dir | _] ->
         Logger.info("Empty tile at #{inspect dir} to hero.")
         {:ok, dir}
     end
   end
+
+  #--- Helpers ---
 
   defp is_tile?(map, direction, type) do
     case tile(map, direction) do
@@ -240,47 +203,7 @@ defmodule Vindinium.Bots.Debug do
     hero_life(state) < (@hero_life_max - (@tavern_life / 2))
   end
 
-
-  @search_coords_order [
-    {1,1},
-
-    {2,0},
-
-    {2,1},
-    {1,2},
-    
-    {3,0},
-    
-    {3,1},
-    {1,3},
-  ]
-
-  Enum.each(@search_coords_order, fn(coord) ->
-    coord
-    |> Utils.create_sectors
-    |> Enum.each(fn({x,y}) ->
-        defp find_next_mine(%{{unquote(x), unquote(y)} => :mine}, _) do
-          {:ok, {unquote(x), unquote(y)}}
-        end
-        defp find_next_mine(%{{unquote(x), unquote(y)} => {:mine, other_hid}}, my_hid) when my_hid != other_hid do
-          {:ok, {unquote(x), unquote(y)}}
-        end
-    end)
-  end)
-  defp find_next_mine(_, _), do: :error
-
-  Enum.each(@search_coords_order, fn(coord) ->
-    coord
-    |> Utils.create_sectors
-    |> Enum.each(fn({x,y}) ->
-        defp find_next_tavern(%{{unquote(x), unquote(y)} => :tavern}) do
-          {:ok, {unquote(x), unquote(y)}}
-        end
-    end)
-  end)
-  defp find_next_tavern(_), do: :error
-
-
+  # Will build a map from tiles using hero position as 0,0
   defp build_map(%{"game" => %{"board" => %{"size" => size, "tiles" => tiles}}} = state) do
     {hero_x, hero_y} = hero_position(state)
     tiles
@@ -301,6 +224,7 @@ defmodule Vindinium.Bots.Debug do
     |> Enum.into(%{})
   end
 
+  # Will print human readable map from tiles.
   def print_map(%{"game" => %{"board" => %{"size" => size, "tiles" => tiles}}}) do
     IO.puts(" ")
     IO.puts("+" <> String.duplicate("-", size*2) <> "+")
@@ -311,6 +235,7 @@ defmodule Vindinium.Bots.Debug do
     IO.puts("+" <> String.duplicate("-", size*2) <> "+")
   end
 
+  # Will return a line showing all info about hero.
   def hero_stats_line(%{"crashed" => crashed, "elo" => elo, "gold" => gold, "id" => id,
                           "life" => life, "mineCount" => mines, "name" => name,
                           "pos" => _, "spawnPos" => _, "userId" => _}) do
